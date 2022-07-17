@@ -1,16 +1,15 @@
 import torch
 
 from foolbox import PyTorchModel
-from foolbox.attacks import FGSMMC, PGDMC, BIMMC, CWMC
-
+from foolbox.attacks import LinfFastGradientAttack, LinfProjectedGradientDescentAttack, L2CarliniWagnerAttack, \
+    LinfBasicIterativeAttack
 
 attacks = {
-    'FGSM': FGSMMC(),
-    'PGD': PGDMC(rel_stepsize=0.1, steps=10),
-    'BIM': BIMMC(rel_stepsize=0.1, steps=1000),
-    'C&W': CWMC(steps=1000, stepsize=5e-4, confidence=0., initial_const=1e-3),
+    'FGSM': LinfFastGradientAttack(),
+    'PGD': LinfProjectedGradientDescentAttack(rel_stepsize=0.1, steps=10),
+    'BIM': LinfBasicIterativeAttack(rel_stepsize=0.1, steps=1000),
+    'C&W': L2CarliniWagnerAttack(steps=1000, stepsize=5e-4, confidence=0., initial_const=1e-3),
 }
-
 
 def test_attack(model, data_loader, attack_name, epsilon_values, args, device='cpu'):
     model.eval()
