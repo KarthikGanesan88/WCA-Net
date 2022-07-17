@@ -151,7 +151,7 @@ class StochasticBaseMultivariate(nn.Module):
         x = self.gen(x)
         x = self.fc1(x)
         if not self.disable_noise:
-            dist = MultivariateNormal(self.mu, scale_tril=self.L)
+            dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
             x_sample = dist.rsample()
             x = x + x_sample
         return x
@@ -194,7 +194,7 @@ class ResNet18_StochasticBaseMultivariate(nn.Module):
         x = self.gen(x)
         x = f.relu(self.fc1(x))
         if not self.disable_noise:
-            dist = MultivariateNormal(self.mu, scale_tril=self.L)
+            dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
             x_sample = dist.rsample()
             x = x + x_sample
         return x
@@ -237,7 +237,7 @@ class ResNet152_StochasticBaseMultivariate(nn.Module):
         x = self.gen(x)
         x = f.relu(self.fc1(x))
         if not self.disable_noise:
-            dist = MultivariateNormal(self.mu, scale_tril=self.L)
+            dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
             x_sample = dist.rsample()
             x = x + x_sample
         return x
