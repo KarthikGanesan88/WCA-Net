@@ -9,7 +9,7 @@
     "wd": 0.0,
     "training_type": "vanilla",
     "var_type": null,
-    "device": "cuda:0",
+    "device": "cuda",
     "output_path": {
         "stats": "output/stats/wcanet_cifar100_m0",
         "models": "output/models/wcanet_cifar100_m0"
