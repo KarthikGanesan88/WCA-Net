@@ -1,5 +1,5 @@
 import torch
-
+from tqdm.auto import tqdm
 from foolbox import PyTorchModel
 from foolbox.attacks import LinfFastGradientAttack, LinfProjectedGradientDescentAttack, L2CarliniWagnerAttack, \
     LinfBasicIterativeAttack
@@ -10,6 +10,7 @@ attacks = {
     'BIM': LinfBasicIterativeAttack(rel_stepsize=0.1, steps=1000),
     'C&W': L2CarliniWagnerAttack(steps=1000, stepsize=5e-4, confidence=0., initial_const=1e-3),
 }
+
 
 def test_attack(model, data_loader, attack_name, epsilon_values, args, device='cpu'):
     model.eval()
@@ -27,12 +28,12 @@ def test_attack(model, data_loader, attack_name, epsilon_values, args, device='c
         raise NotImplementedError('Dataset not supported.')
     fbox_model = PyTorchModel(model, bounds=(0, 1), device=device, preprocessing=preprocessing)
     success_cum = []
-    for data, target in data_loader:
+    for data, target in tqdm(data_loader):
         data = data.to(device)
         target = target.to(device)
         if attack_name in ('FGSM', 'PGD', 'BIM', 'C&W'):
-            advs, _, success = attack_model(
-                fbox_model, data, target, epsilons=epsilon_values, mc=args['monte_carlo_runs'])
+            advs, _, success = attack_model(fbox_model, data, target, epsilons=epsilon_values)
+            # , mc=args['monte_carlo_runs'])
         elif attack_name in ('Few-Pixel',):
             # Since the few-pixel attack is not supported by foolbox, we have a different testing pipeline.
             raise NotImplementedError()

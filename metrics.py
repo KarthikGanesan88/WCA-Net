@@ -12,5 +12,4 @@ def accuracy(model, data_loader, device='cpu', norm=None):
         logits = model(data)
         positives.append(sum(logits.argmax(-1) == target).item())
         total.append(len(data))
-    accuracy = float(np.sum(positives) / np.sum(total))
-    return accuracy
+    return float(np.sum(positives) / np.sum(total))
