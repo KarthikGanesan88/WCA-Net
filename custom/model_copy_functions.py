@@ -3,15 +3,15 @@ import torch.nn as nn
 from collections import OrderedDict
 import copy
 
-from quant.quantized_convolution_layer import QuantConv2D
-from quant.quantized_fully_connected_layer import QuantLinear
+from custom.quantized_convolution_layer import QuantConv2D
+from custom.quantized_fully_connected_layer import QuantLinear
 
 def create_model_copy(net, layer_type, model_type='appx'):
     """
     Create a copy of the original model, replacing the specified layers with custom versions.
     :param net: The original network to copy.
     :param layer_type: List of layer types to replace. ['Conv2d', 'Linear', 'BatchNorm2d', 'ReLU']
-    :param model_type: Convert the model to 'appx' or 'quant'.
+    :param model_type: Convert the model to 'appx' or 'custom'.
     :return: Copied model.
     """
     if model_type == 'appx':
@@ -19,13 +19,13 @@ def create_model_copy(net, layer_type, model_type='appx'):
         new_linear_layer = 'MyLinear'
         # new_bn_layer = 'MyBatchNorm'
         new_relu_layer = 'Custom_ReLU'
-    elif model_type == 'quant':
+    elif model_type == 'custom':
         new_conv_layer = 'QuantConv2D'
         new_linear_layer = 'QuantLinear'
         # new_bn_layer = 'QuantBatchNorm'
         new_relu_layer = 'Custom_ReLU'
     else:
-        print('ERROR: Can only create an appx or quant copy of the model')
+        print('ERROR: Can only create an appx or custom copy of the model')
         return
 
     model = copy.deepcopy(net)
@@ -101,11 +101,11 @@ def copy_state_dict(source_model):
 
     for key in source_state_dict:
         layer_name, layer_type = key.split('.', 1)
-        # Since quant is always the first layer, it's values get set as the
+        # Since custom is always the first layer, it's values get set as the
         # in values of the first layer in the list.
         next_layer = layer_list[(layer_list.index(layer_name) + 1)]
         # print(f'Current Layer:{layer_name}, Next Layer:{next_layer}')
-        if layer_name == 'quant':
+        if layer_name == 'custom':
             new_state_dict[next_layer + '.in_' + layer_type] = source_state_dict[key]
         if 'conv' in layer_name:
             if layer_type in ['scale', 'zero_point']:

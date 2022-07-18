@@ -1,4 +1,5 @@
 {
+    "model": "resnet18",
     "dataset": "cifar10",
     "num_classes": 10,
     "pretrained": null,
@@ -13,10 +14,6 @@
     "attack": "pgd",
     "epsilon": 0.03,
     "var_type": "anisotropic",
-    "device": "cuda:3",
-    "output_path": {
-        "stats": "output/stats/wcanet_cifar10_m3",
-        "models": "output/models/wcanet_cifar10_m3"
-    },
+    "device": "cuda",
     "monte_carlo_runs": 50
 }

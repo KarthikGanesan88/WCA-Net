@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as nnf
 
 
-# All this layer needs to do is add the quant parameters to the input so it matches all the other inputs
+# All this layer needs to do is add the custom parameters to the input so it matches all the other inputs
 # that the first layer type will receive
 def quant_layer(input_matrix, quant_scale, quant_zero_point):
 

@@ -1,4 +1,5 @@
 {
+    "model": "resnet18",
     "dataset": "cifar10",
     "num_classes": 10,
     "pretrained": null,
@@ -10,9 +11,5 @@
     "training_type": "vanilla",
     "var_type": null,
     "device": "cuda",
-    "output_path": {
-        "stats": "output/stats/wcanet_cifar10_m0",
-        "models": "output/models/wcanet_cifar10_m0"
-    },
     "monte_carlo_runs": 50
 }

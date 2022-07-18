@@ -32,12 +32,12 @@ def parse_args():
 class quant_model(torch.nn.Module):
     def __init__(self, model_base):
         super().__init__()
-        self.quant = torch.quantization.QuantStub()
+        self.custom = torch.quantization.QuantStub()
         self.model = model_base
         self.dequant = torch.quantization.DeQuantStub()
 
     def forward(self, x):
-        x = self.quant(x)
+        x = self.custom(x)
         x = self.model(x)
         x = self.dequant(x)
         return x
@@ -110,8 +110,8 @@ def quantize(args, device):
                           args['num_classes'])
     model.to(device)
 
-    # model.load(os.path.join(args['output_path']['models'], 'ckpt_best'))
-    model.load(os.path.join(args['output_path']['models'], 'ckpt_last'))
+    model_path = os.path.join(f"./output/models/wcanet_cifar10_m0", 'ckpt_last')
+    model.load(model_path)
 
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
     data_norm = get_norm_func(args)
@@ -175,7 +175,7 @@ def quantize(args, device):
     breakpoint()
 
 
-# Run the PyTorch quant code with fusing to get the right
+# Run the PyTorch custom code with fusing to get the right
 # Weights and bias or conv + bn layers and check if the below is right.
 
 def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var, epsilon=1e-5):

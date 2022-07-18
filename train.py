@@ -66,14 +66,14 @@ def train_vanilla(model, train_loader, test_loader, args, model_path, logfile, d
         model.save(os.path.join(model_path, 'ckpt_last'))
         if epoch % 50 == 0 and epoch > 10:
             # Every 50 epochs, run the attacks to see how this changes.
-            attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
-            print_log(logfile, 'Adversarial testing.')
-            for idx, attack in enumerate(attack_names):
-                eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
-                eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
-                robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device='cpu')
-                for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
-                    print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
+            # attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+            # print_log(logfile, 'Adversarial testing.')
+            # for idx, attack in enumerate(attack_names):
+            #     eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
+            #     eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
+            #     robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device='cpu')
+            #     for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
+            #         print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
 
@@ -117,14 +117,14 @@ def train_stochastic(model, train_loader, test_loader, args, model_path, logfile
 
         if epoch % 50 == 0 and epoch > 10:
             # Every 50 epochs, run the attacks to see how this changes.
-            attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
-            print_log(logfile, 'Adversarial testing.')
-            for idx, attack in enumerate(attack_names):
-                eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
-                eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
-                robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device='cpu')
-                for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
-                    print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
+            # attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+            # print_log(logfile, 'Adversarial testing.')
+            # for idx, attack in enumerate(attack_names):
+            #     eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
+            #     eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
+            #     robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device='cpu')
+            #     for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
+            #         print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
 
@@ -176,13 +176,13 @@ def train_stochastic_adversarial(model, train_loader, test_loader, args, model_p
         model.save(os.path.join(model_path, 'ckpt_last'))
         if epoch % 50 == 0 and epoch > 10:
             # Every 50 epochs, run the attacks to see how this changes.
-            attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
-            print_log(logfile, 'Adversarial testing.')
-            for idx, attack in enumerate(attack_names):
-                eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
-                eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
-                robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device='cpu')
-                for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
-                    print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
+            # attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+            # print_log(logfile, 'Adversarial testing.')
+            # for idx, attack in enumerate(attack_names):
+            #     eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
+            #     eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
+            #     robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device='cpu')
+            #     for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
+            #         print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))

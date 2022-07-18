@@ -95,7 +95,7 @@ class quantConvFunc(torch.autograd.Function):
         # The outputs are returned as float values. So they just need to be quantized for the next layer.
         # out_unf = torch.quantize_per_tensor(out_unf, out_scale.item(), int(out_zero_point.item()), dtype=torch.quint8)
 
-        # print("CONV output from quant:")
+        # print("CONV output from custom:")
         # print(out_unf)
         # pdb.set_trace()
 
