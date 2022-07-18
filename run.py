@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from datetime import datetime
 
 import torch
 from tqdm.auto import tqdm
@@ -227,11 +228,18 @@ def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var
 def train(args, device):
     print(args)
 
+    train_type = args['var_type'] if args['training_type'] == "stochastic" else args['training_type']
     model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{args['training_type']}_{args['feature_dim']}")
+        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
 
     os.makedirs(model_path, exist_ok=True)
-    logfile = os.path.join(model_path, 'log.txt')
+    logfile = os.path.join(model_path, f'{datetime.now().strftime("%Y_%M_%d_%H_%M_%S")}.log')
+    log = open(logfile, 'a')
+    for key, value in args.items():
+        log.write(f'{key}: {value}, ')
+    log.write('\n')
+    log.flush()
+    log.close()
 
     train_loader = get_data_loader(args['dataset'], args['batch_size'], train=True, shuffle=True, drop_last=True)
     test_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False, drop_last=False)
@@ -267,8 +275,9 @@ def test(args, device):
                           args['num_classes'])
     model.to(device)
 
+    train_type = args['var_type'] if args['training_type'] == "stochastic" else args['training_type']
     model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{args['training_type']}_{args['feature_dim']}")
+        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
 
     # model.load(os.path.join(model_path, 'ckpt_best'))
     model.load(os.path.join(model_path, 'ckpt_last'))
