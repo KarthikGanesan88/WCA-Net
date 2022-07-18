@@ -27,7 +27,7 @@ class PreActBlock(nn.Module):
 
 
 class PreActResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10, normalize=None):
+    def __init__(self, block, num_blocks, num_classes=10):
         super(PreActResNet, self).__init__()
         self.in_planes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
@@ -36,7 +36,7 @@ class PreActResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         self.bn = nn.BatchNorm2d(512 * block.expansion)
-        self.linear = nn.Linear(512 * block.expansion, num_classes)
+        # self.linear = nn.Linear(512 * block.expansion, num_classes)
         self.init_params()
 
     def init_params(self):
@@ -70,8 +70,8 @@ class PreActResNet(nn.Module):
         x = F.relu(self.bn(x))
         x = F.avg_pool2d(x, 4)
         x = x.view(x.size(0), -1)
-        x = self.linear(x)
+        # x = self.linear(x)
         return x
 
-def PreActResNet18(num_classes=10, normalize=None):
-    return PreActResNet(PreActBlock, [2, 2, 2, 2], num_classes=num_classes, normalize=normalize)
+def PreActResNet18(num_classes=10):
+    return PreActResNet(PreActBlock, [2, 2, 2, 2], num_classes=num_classes)

@@ -10,7 +10,7 @@ from data_loaders import get_data_loader
 from models import model_factory
 from test import test_attack
 from train import train_vanilla, train_stochastic, train_stochastic_adversarial, get_norm_func
-from utils import attack_to_dataset_config
+from utils import attack_to_dataset_config, print_log
 import metrics
 from metrics import accuracy as accuracy
 from resnet_folded import VanillaResNet18_folded
@@ -104,9 +104,11 @@ def quantize(args, device):
 def quantize(args, device):
     print(args)
     print('MODE: Quantize')
-    model = model_factory(
-        args['dataset'], args['training_type'], args['var_type'], args['feature_dim'], args['num_classes'])
+    model = model_factory(args['model'],
+                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
+                          args['num_classes'])
     model.to(device)
+
     # model.load(os.path.join(args['output_path']['models'], 'ckpt_best'))
     model.load(os.path.join(args['output_path']['models'], 'ckpt_last'))
 
@@ -171,11 +173,11 @@ def quantize(args, device):
 
     breakpoint()
 
+
 # Run the PyTorch quant code with fusing to get the right
 # Weights and bias or conv + bn layers and check if the below is right.
 
 def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var, epsilon=1e-5):
-
     norm_factor = bn_weight / torch.sqrt(bn_var) + epsilon
     new_weight = conv_weight * torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(norm_factor, 1), 1), 1)
 
@@ -221,42 +223,55 @@ def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var
     return new_weights, new_bias
     '''
 
+
 def train(args, device):
     print(args)
-    os.makedirs(args['output_path']['stats'], exist_ok=True)
-    os.makedirs(args['output_path']['models'], exist_ok=True)
+
+    model_path = os.path.join(
+        f"./output/{args['model']}_{args['dataset']}_{args['training_type']}_{args['feature_dim']}")
+
+    os.makedirs(model_path, exist_ok=True)
+    logfile = os.path.join(model_path, 'log.txt')
+
     train_loader = get_data_loader(args['dataset'], args['batch_size'], train=True, shuffle=True, drop_last=True)
     test_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False, drop_last=False)
-    model = model_factory(
-        args['dataset'], args['training_type'], args['var_type'], args['feature_dim'], args['num_classes'])
+    model = model_factory(args['model'],
+                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
+                          args['num_classes'])
     model.to(device)
+
     if args['pretrained'] is not None:
         if args['pretrained'] not in ('ckpt_best', 'ckpt_last', 'ckpt_robust'):
             raise ValueError('Pre-trained model name must be: [ckpt_best|ckpt_last|ckpt_robust]')
-        model.load(os.path.join(args['output_path']['models'], args['pretrained']))
+        model.load(os.path.join(model_path, args['pretrained']))
     if args['training_type'] == 'vanilla':
-        print('Vanilla training.')
-        train_vanilla(model, train_loader, test_loader, args, device=device)
+        print_log(logfile, 'Vanilla training.')
+        train_vanilla(model, train_loader, test_loader, args, model_path, logfile, device=device)
     elif args['training_type'] == 'stochastic':
-        print('Stochastic training.')
-        train_stochastic(model, train_loader, test_loader, args, device=device)
+        print_log(logfile, 'Stochastic training.')
+        train_stochastic(model, train_loader, test_loader, args, model_path, logfile, device=device)
     elif args['training_type'] == 'stochastic+adversarial':
-        print('Adversarial stochastic training.')
-        train_stochastic_adversarial(model, train_loader, test_loader, args, device=device)
+        print_log(logfile, 'Adversarial stochastic training.')
+        train_stochastic_adversarial(model, train_loader, test_loader, args, model_path, logfile, device=device)
     else:
         raise NotImplementedError(
             'Training "{}" not implemented. Supported: [vanilla|stochastic|stochastic+adversarial].'.format(
                 args['training_type']))
-    print('Finished training.')
+    print_log(logfile, 'Finished training.')
 
 
 def test(args, device):
     print(args)
-    model = model_factory(
-        args['dataset'], args['training_type'], args['var_type'], args['feature_dim'], args['num_classes'])
+    model = model_factory(args['model'],
+                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
+                          args['num_classes'])
     model.to(device)
-    model.load(os.path.join(args['output_path']['models'], 'ckpt_best'))
-    # model.load(os.path.join(args['output_path']['models'], 'ckpt_last'))
+
+    model_path = os.path.join(
+        f"./output/{args['model']}_{args['dataset']}_{args['training_type']}_{args['feature_dim']}")
+
+    # model.load(os.path.join(model_path, 'ckpt_best'))
+    model.load(os.path.join(model_path, 'ckpt_last'))
     model.eval()
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 
@@ -279,7 +294,7 @@ def test(args, device):
             eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
             robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device)
             for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
-                print('Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
+                print('Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100. * acc.item()))
     print('Finished testing.')
 
 

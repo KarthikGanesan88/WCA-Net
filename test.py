@@ -38,6 +38,7 @@ def test_attack(model, data_loader, attack_name, epsilon_values, args, device='c
             # Since the few-pixel attack is not supported by foolbox, we have a different testing pipeline.
             raise NotImplementedError()
         success_cum.append(success)
+        del data, target
     success_cum = torch.cat(success_cum, dim=1)
     robust_accuracy = 1 - success_cum.float().mean(axis=-1)
     return robust_accuracy

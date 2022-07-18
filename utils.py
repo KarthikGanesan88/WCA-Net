@@ -1,3 +1,5 @@
+import os
+
 eps_names_mnist = ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5']
 eps_values_mnist = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 # eps_names_cifar = ['  0/255', '  1/255', '  2/255', '  4/255', '  8/255', ' 16/255', ' 32/255', ' 64/255', '128/255']
@@ -31,6 +33,14 @@ std_cifar100 = (0.2675, 0.2565, 0.2761)
 mean_generic = (0.5, 0.5, 0.5)
 std_generic = (0.5, 0.5, 0.5)
 
+def print_log(logfile, print_string, log_only=False):
+    if not log_only:
+        print("{}".format(print_string))
+
+    log = open(logfile, 'a')
+    log.write('{}\n'.format(print_string))
+    log.flush()
+    log.close()
 
 def normalize_cifar10(t):
     t[:, 0, :, :] = (t[:, 0, :, :] - mean_cifar10[0]) / std_cifar10[0]
