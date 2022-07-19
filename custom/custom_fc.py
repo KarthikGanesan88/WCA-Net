@@ -15,7 +15,10 @@ class linear_appx(torch.autograd.Function):
 
             weight = torch.transpose(weight, 0, 1).flatten()
 
-            out = cuda_matmul.linear_forward(X, weight, bias, m, n, k, appx_mode)
+            use_bias = 0 if bias is None else 1
+            bias = torch.Tensor([0.]) if bias is None else bias
+
+            out = cuda_matmul.linear_forward(X, weight, bias, m, n, k, int(appx_mode.item()), use_bias)
 
             return out
         else:

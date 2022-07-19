@@ -1,17 +1,17 @@
 import torch
 import torch.nn as nn
-from common import VanillaBase, WCANet_Base
+from .common import VanillaBase, WCANet_Base
 import torch.nn.functional as f
 from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal
 
-class Generator(nn.Module):
+class LeNetPlus(nn.Module):
     """ LeNets++ architecture from: "A Discriminative Feature Learning Approach for Deep Face Recognition"
         The variant is used by PCL, i.e. no max pooling and no padding.
     """
 
     def __init__(self, D):
-        super(Generator, self).__init__()
+        super().__init__()
         self.conv1 = self._make_conv_layer(1, 32, 5)
         self.conv2 = self._make_conv_layer(32, 32, 5)
         self.conv3 = self._make_conv_layer(32, 64, 5)
@@ -34,10 +34,10 @@ class Generator(nn.Module):
         return x
 
 
-class VanillaCNN(VanillaBase):
+class VanillaLeNetPlus(VanillaBase):
     def __init__(self, D, C):
         super().__init__()
-        self.gen = Generator(D)
+        self.gen = LeNetPlus(D)
         self.fc1 = nn.Linear(2048, D)
         self.proto = nn.Linear(D, C)
 
@@ -48,12 +48,12 @@ class VanillaCNN(VanillaBase):
         return x
 
 
-class StochasticBaseDiagonal(nn.Module):
+class LeNetPlus_StochasticBaseDiagonal(nn.Module):
     """ Zero mean, trainable variance. """
 
     def __init__(self, D, disable_noise=False):
         super().__init__()
-        self.gen = Generator(D)
+        self.gen = LeNetPlus(D)
         self.fc1 = nn.Linear(2048, D)
         self.sigma = nn.Parameter(torch.rand(D), requires_grad=(not disable_noise))
         self.disable_noise = disable_noise
@@ -68,12 +68,12 @@ class StochasticBaseDiagonal(nn.Module):
         return x
 
 
-class StochasticBaseMultivariate(nn.Module):
+class LeNetPlus_StochasticBaseMultivariate(nn.Module):
     """ Trainable lower triangular matrix L, so Sigma=LL^T. """
 
     def __init__(self, D, disable_noise=False):
         super().__init__()
-        self.gen = Generator(D)
+        self.gen = LeNetPlus(D)
         self.fc1 = nn.Linear(2048, D)
         self.mu = nn.Parameter(torch.zeros(D), requires_grad=False)
         self.L = nn.Parameter(torch.rand(D, D).tril(), requires_grad=(not disable_noise))
@@ -93,13 +93,13 @@ class StochasticBaseMultivariate(nn.Module):
         return x
 
 
-class WCANet_CNN(WCANet_Base):
+class WCANet_LeNetPlus(WCANet_Base):
     def __init__(self, D, C, variance_type, disable_noise=False):
         super().__init__()
         if variance_type == 'isotropic':
-            self.base = StochasticBaseDiagonal(D, disable_noise=disable_noise)
+            self.base = LeNetPlus_StochasticBaseDiagonal(D, disable_noise=disable_noise)
         elif variance_type == 'anisotropic':
-            self.base = StochasticBaseMultivariate(D, disable_noise=disable_noise)
+            self.base = LeNetPlus_StochasticBaseMultivariate(D, disable_noise=disable_noise)
         self.proto = nn.Linear(D, C)
 
     @property

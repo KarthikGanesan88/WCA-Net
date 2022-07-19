@@ -1,8 +1,9 @@
-approx/build/*
-approx/dist/*
-
 __pycache__/
 
 # Soft links to data
 data
 output
+
+/approx/build/*
+/approx/cuda_matmul.egg-info/*
+/approx/dist/*

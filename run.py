@@ -8,18 +8,20 @@ from tqdm.auto import tqdm
 
 from attacks.one_pixel import one_pixel_attack
 from data_loaders import get_data_loader
-from models import model_factory
+from models.model_list import model_factory
 from test import test_attack
 from train import train_vanilla, train_stochastic, train_stochastic_adversarial, get_norm_func
-from utils import attack_to_dataset_config, print_log
+from utils import attack_to_dataset_config, print_log, modify_layers
 import metrics
 from metrics import accuracy as accuracy
-from resnet_folded import VanillaResNet18_folded
+# from resnet_folded import VanillaResNet18_folded
 
+from custom.custom_conv import CustomConv
+from custom.custom_fc import CustomLinear
 
 def parse_args():
     mode = sys.argv[1]
-    if mode not in ('train', 'test', 'train+test', 'quantize'):
+    if mode not in ('train', 'test', 'train+test', 'quantize', 'test_multiple'):
         raise ValueError()
     config_file = sys.argv[2]
     with open(config_file, 'r') as fp:
@@ -115,8 +117,20 @@ def quantize(args, device):
 
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
     data_norm = get_norm_func(args)
+    # test_acc = accuracy(model, test_loader, device=device, norm=data_norm)
+    # print(f'FP32 test accuracy: {100. * test_acc:.3f}%')
+
+    modify_layers(model)
+
+    for name, layer in model.named_modules():
+        if isinstance(layer, CustomConv) or isinstance(layer, CustomLinear):
+            layer.appx_mode = torch.Tensor([1]).cuda()
+            # print(f'{name}: Appx mode:{layer.appx_mode}')
+
     test_acc = accuracy(model, test_loader, device=device, norm=data_norm)
-    print(f'FP32 test accuracy: {100. * test_acc:.3f}%')
+    print(f'Custom test accuracy: {100. * test_acc:.3f}%')
+
+    breakpoint()
 
     model_fused = VanillaResNet18_folded(args['feature_dim'], args['num_classes'])
     new_state_dict = model_fused.state_dict()
@@ -171,6 +185,15 @@ def quantize(args, device):
     model_fused.cuda()
     test_acc = accuracy(model_fused, test_loader, device=device, norm=data_norm)
     print(f'Quant test accuracy: {100. * test_acc:.3f}%')
+
+    # Replace the layers in this model with the custom versions.
+    modify_layers(model_fused)
+
+    # for name, layer in model_fused.named_modules():
+    #     print(name, type(layer))
+
+    test_acc = accuracy(model_fused, test_loader, device=device, norm=data_norm)
+    print(f'Custom test accuracy: {100. * test_acc:.3f}%')
 
     breakpoint()
 
@@ -267,6 +290,47 @@ def train(args, device):
                 args['training_type']))
     print_log(logfile, 'Finished training.')
 
+def test_multiple(args, device):
+    print(args)
+    model = model_factory(args['model'],
+                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
+                          args['num_classes'])
+    model.to(device)
+
+    train_type = args['var_type'] if args['training_type'] == "stochastic" else args['training_type']
+    model_path = os.path.join(
+        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+
+    test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+
+    # To test multiple models in one run.
+    for model_num in range(50, args['num_epochs'], 50):
+        print(f'Running model saved at epoch: {model_num}')
+        model.load(os.path.join(model_path, f'ckpt_{model_num}'))
+        model.eval()
+
+        test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
+        print(f'Accuracy: {100. * test_acc:.3f}%\n\n')
+
+        attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+        print('Adversarial testing.')
+        for idx, attack in enumerate(attack_names):
+            print('Attack: {}'.format(attack))
+            if attack == 'Few-Pixel':
+                if args['dataset'] == 'cifar10':
+                    preproc = {'mean': [0.4914, 0.4822, 0.4465], 'std': [0.2023, 0.1994, 0.2010]}
+                else:
+                    raise NotImplementedError('Only CIFAR-10 supported for the one-pixel attack.')
+                one_pixel_attack(
+                    model, test_loader, preproc, device, pixels=1, targeted=False, maxiter=1000, popsize=400,
+                    verbose=False)
+            else:
+                eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
+                eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
+                robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device)
+                for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
+                    print('Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100. * acc.item()))
+        print('Finished testing.')
 
 def test(args, device):
     print(args)
@@ -318,6 +382,8 @@ def main(mode, args):
         test(args, device)
     elif mode == 'quantize':
         quantize(args, device)
+    elif mode == 'test_multiple':
+        test_multiple(args, device)
     else:
         train(args, device)
         test(args, device)

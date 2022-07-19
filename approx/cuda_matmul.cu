@@ -22,7 +22,8 @@ __global__ void matmul_cuda_int8(
   const int n,
   const int k,
   const int batch_size,
-  const int appx_mode
+  const int appx_mode,
+  const int use_bias
 ){
     int img = blockIdx.z * blockDim.z + threadIdx.z;
     int row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -47,6 +48,9 @@ __global__ void matmul_cuda_int8(
 						//printf("[%d,%d,%d,%d]:(%1.3f*%1.3f)\n", blockIdx.y, blockIdx.x, row, col, \
 																image[(img*m*n)+(row*n) + i], weight[i * k + col]);
         }
+        if (use_bias == 1) {
+            sum += bias[col];
+        }
         output[(img*m*k)+(row*k) + col] = (sum*image_s*weight_s) + bias[col];
         // output[(img*m*k)+(row*k) + col] = (final>0.0f)?final:0.0f;
     }
@@ -63,7 +67,7 @@ __global__ void matmul_cuda_float(
   const int k,
   const int batch_size,
   const int appx_mode,
-  const bool use_bias
+  const int use_bias
 ){
     int img = blockIdx.z * blockDim.z + threadIdx.z;
     int row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -93,7 +97,7 @@ __global__ void matmul_cuda_float(
 						//printf("[%d,%d,%d,%d]:(%1.3f*%1.3f)\n", blockIdx.y, blockIdx.x, row, col, \
 																image[(img*m*n)+(row*n) + i], weight[i * k + col]);
         }
-        if (use_bias == true) {
+        if (use_bias == 1) {
             sum += bias[col];
         }
 
@@ -110,7 +114,7 @@ torch::Tensor conv_forward(
 	int k,
 	int b,
   int appx_mode,
-  bool use_bias
+  int use_bias
 ) {
 
 	auto options = torch::TensorOptions().device(torch::kCUDA, 0);
@@ -165,7 +169,8 @@ torch::Tensor conv_forward_int8(
 	int n,
 	int k,
 	int b,
-  int appx_mode
+  int appx_mode,
+  int use_bias
 ) {
 
 	auto options = torch::TensorOptions().device(torch::kCUDA, 0);
@@ -194,7 +199,8 @@ torch::Tensor conv_forward_int8(
     bias.data_ptr<float>(),
     output.data_ptr<float>(),
     m, n, k, b,
-    appx_mode
+    appx_mode,
+    use_bias
   );
 
   cudaDeviceSynchronize();
@@ -209,7 +215,7 @@ torch::Tensor linear_forward(
 	int n,
 	int k,
   int appx_mode,
-  bool use_bias
+  int use_bias
 ) {
 
 	auto options = torch::TensorOptions().device(torch::kCUDA, 0);
@@ -247,7 +253,8 @@ torch::Tensor linear_forward_int8(
 	int m,
 	int n,
 	int k,
-  int appx_mode
+  int appx_mode,
+  int use_bias
 ) {
 
 	auto options = torch::TensorOptions().device(torch::kCUDA, 0);
@@ -268,7 +275,8 @@ torch::Tensor linear_forward_int8(
 		bias.data_ptr<float>(),
 		output.data_ptr<float>(),
 		m, n, k, 1, /* Pass in b=1 since there is no z-dimension for linear layers*/
-    appx_mode
+    appx_mode,
+    use_bias
 	);
 
   cudaDeviceSynchronize();

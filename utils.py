@@ -1,5 +1,7 @@
 import os
 
+import torch
+
 eps_names_mnist = ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5']
 eps_values_mnist = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 # eps_names_cifar = ['  0/255', '  1/255', '  2/255', '  4/255', '  8/255', ' 16/255', ' 32/255', ' 64/255', '128/255']
@@ -61,3 +63,68 @@ def normalize_generic(t):
     t[:, 1, :, :] = (t[:, 1, :, :] - mean_generic[1]) / std_generic[1]
     t[:, 2, :, :] = (t[:, 2, :, :] - mean_generic[2]) / std_generic[2]
     return t
+
+
+########################################################
+#   Modify network layers to use custom versions.
+#    Supports converting the model to use approximate versions
+#    as well as PNI layer versions.
+#########################################################
+
+import torch.nn as nn
+from custom.custom_conv import CustomConv
+from custom.custom_fc import CustomLinear
+
+def modify_layers(model):
+    # Dict of custom layers, selected based on layer type and model type.
+    new_layers = {'conv': CustomConv, 'fc': CustomLinear}
+
+    for name, layer in model.named_modules():
+        # print('layer_name:', name)
+        layer_type = None
+        if isinstance(layer, nn.Conv2d):
+            layer_type = 'conv'
+            layer_params = ['dilation', 'kernel_size', 'padding', 'stride',
+                            'out_channels', 'in_channels']
+
+        elif isinstance(layer, nn.Linear):
+            layer_type = 'fc'
+            layer_params = ['in_features', 'out_features']
+
+        if layer_type is not None:
+            # For sequential and custom blocks, need to get the pointer to the
+            # actual layer to get its parameters and set parameters for the new layer.
+            name_parts = name.split('.')
+
+            # Get the module that this layer belongs to. Could be the model itself,
+            # a sequential layer or custom block.
+            base_module = model
+            for part in name_parts[:-1]:
+                base_module = getattr(base_module, part)
+
+            saved_params = {}
+
+            layer_module = getattr(base_module, name_parts[-1])
+
+            for param in layer_params:
+                saved_params[param] = getattr(layer_module, param)
+
+            # Saving weight and bias separately since they are not used
+            # when initializing the layer.
+            saved_weight = getattr(layer_module, 'weight')
+            saved_bias = getattr(layer_module, 'bias')
+
+            # Create the new layer with these parameters.
+            # new_layer = AppxConv2d(saved_params['in_channels'],
+            #                        saved_params['out_channels'],
+            #                        saved_params['kernel_size'],
+            #                        stride=saved_params['stride'],
+            #                        padding=saved_params['padding'],
+            #                        dilation=saved_params['dilation'])
+            new_layer = new_layers[layer_type](**saved_params)
+
+            new_layer.weight = saved_weight
+            new_layer.bias = saved_bias
+
+            # Replace the old layer with the new one in the model.
+            setattr(base_module, name_parts[-1], new_layer)

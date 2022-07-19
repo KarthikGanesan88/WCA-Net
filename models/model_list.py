@@ -1,7 +1,8 @@
-from preactresnet import VanillaPreActResNet18, WCANet_PreActResNet18
-from resnet import VanillaResNet18, WCANet_ResNet18
-from lenet import VanillaLeNet, WCANet_LeNet
-from lenetplus import VanillaLeNetPlus, WCANet_LeNetPlus
+from .preactresnet import VanillaPreActResNet18, WCANet_PreActResNet18
+from .resnet import VanillaResNet18, WCANet_ResNet18
+from .lenet import VanillaLeNet, WCANet_LeNet
+from .lenetplus import VanillaLeNetPlus, WCANet_LeNetPlus
+from .wideresnet import VanillaWideResNet32, WCANet_WideResNet32
 
 def model_factory(model, dataset, training_type, variance_type, feature_dim, num_classes):
     model_list = {
@@ -21,10 +22,10 @@ def model_factory(model, dataset, training_type, variance_type, feature_dim, num
             'vanilla': VanillaPreActResNet18,
             'stochastic': WCANet_PreActResNet18
         },
-        # 'wideresnet32': {
-        #     'vanilla': VanillaWideResNet32,
-        #     'stochastic': WCANet_WideResNet32
-        # },
+        'wideresnet32': {
+            'vanilla': VanillaWideResNet32,
+            'stochastic': WCANet_WideResNet32
+        },
     }
     if training_type == 'vanilla':
         return model_list[model][training_type](feature_dim, num_classes)

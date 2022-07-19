@@ -4,8 +4,6 @@ import torch.nn.grad
 import torch.nn.functional as F
 import numpy as np
 import cuda_matmul
-# import cpp_layers
-
 
 # To deal with padding and stride needing to be tuples instead of ints.
 def make_tuple(param):
@@ -15,12 +13,12 @@ def make_tuple(param):
     else:
         return param
 
-
 class convAppx(torch.autograd.Function):
 
     @staticmethod
-    def forward(ctx, X, weight, bias, appx_mode, padding=(1, 1), stride=(1, 1)):
-        confs = torch.from_numpy(np.array([stride[0], padding[0]]))
+    def forward(ctx, X, weight, bias, appx_mode, padding=(1, 1), stride=(1, 1), dilation=(1, 1)):
+        # confs = torch.from_numpy(np.array([stride[0], padding[0]]))
+        confs = torch.Tensor([stride[0], padding[0]])
         ctx.save_for_backward(X, weight, bias, confs)
 
         # print(f"Input:: GPU: {X.is_cuda}, Shape: {X.shape}")
@@ -29,17 +27,18 @@ class convAppx(torch.autograd.Function):
 
         # print(f"Appx Mode inside pytorch conv:{appx_mode}")
 
-        (b, n_C_prev, n_H_prev, n_W_prev) = X.shape
-        (n_oC, n_iC, f, f) = weight.shape
+        (batch_size, n_C_prev, n_H_prev, n_W_prev) = X.shape
+        (n_oC, n_iC, f_H, f_W) = weight.shape
 
-        n_H = ((n_H_prev - f + (2 * padding[0])) // stride[0]) + 1
-        n_W = ((n_W_prev - f + (2 * padding[0])) // stride[0]) + 1
+        n_H = ((n_H_prev + (2 * padding[0]) - (dilation[0] * (f_H - 1)) - 1) // stride[0]) + 1
+        n_W = ((n_W_prev + (2 * padding[1]) - (dilation[1] * (f_W - 1)) - 1) // stride[1]) + 1
 
         # pdb.set_trace()
 
         # print(f"APPX:\n X:\n{X} W:\n{weight}")
 
-        X_pad = F.pad(X, (padding[0], padding[0], padding[0], padding[0]))
+        # Left, right, top, bottom -- No need to pad separately
+        # X_pad = F.pad(X, (padding[0], padding[0], padding[0], padding[0]))
         # print(f"X_pad: {X_pad.size()}, is_cuda:{X_pad.is_cuda}")
 
         # pdb.set_trace()
@@ -49,7 +48,12 @@ class convAppx(torch.autograd.Function):
             # print("Input")
             # print(X_pad)
 
-            inp_unf = torch.nn.functional.unfold(X_pad, (f, f))
+            inp_unf = torch.nn.functional.unfold(X,
+                                                 kernel_size=(f_H, f_W),
+                                                 padding=padding,
+                                                 stride=stride,
+                                                 dilation=dilation
+                                                 )
             # print(f"Inp_unf: {inp_unf.size()}")
             # print(inp_unf)
 
@@ -66,9 +70,12 @@ class convAppx(torch.autograd.Function):
             # print(f"Values into CUDA. m:{inp_unf.size(1)}, n:{inp_unf.size(2)}, k:{weight.size(1)}")
             # - input, weight, bias, m, n, k, b
 
+            use_bias = 0 if bias is None else 1
+            bias = torch.Tensor([0.]) if bias is None else bias
+
             out_unf = cuda_matmul.conv_forward(inp_unf_flat, weight_flat, bias,
-                                               inp_unf.size(1), inp_unf.size(2),
-                                               weight.size(1), b, appx_mode)
+                                               inp_unf.size(1), inp_unf.size(2), weight.size(1),
+                                               batch_size, int(appx_mode.item()), use_bias)
 
             # pdb.set_trace()
 
@@ -99,7 +106,7 @@ class convAppx(torch.autograd.Function):
             out_unf = out_unf.transpose(1, 2)
             # print(f"out_unf transposed: {out_unf.size()}")
 
-            out_unf = out_unf.view(b, n_oC, n_H, n_W)
+            out_unf = out_unf.view(batch_size, n_oC, n_H, n_W)
             # print(f"out_unf reshaped: {out_unf.size()}")
 
             # print("CONV output from appx:")
@@ -141,7 +148,6 @@ class convAppx(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         X, weight, bias, confs = ctx.saved_tensors
-        confs = confs.numpy()
         stride, padding = confs[0], confs[1]
         grad_input = grad_weight = grad_bias = None
 
@@ -157,20 +163,19 @@ class convAppx(torch.autograd.Function):
         else:
             return grad_input, grad_weight, None, None, None, None, None
 
-
-class MyConv2d(nn.Module):
-    def __init__(self, n_channels, out_channels, kernel_size, stride=(1, 1), padding=(0, 0), dilation=(1, 1)):
-        super(MyConv2d, self).__init__()
+class CustomConv(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=(1, 1), padding=(0, 0), dilation=(1, 1)):
+        super().__init__()
 
         self.kernel_size = make_tuple(kernel_size)
         self.dilation = make_tuple(dilation)
         self.padding = make_tuple(padding)
         self.stride = make_tuple(stride)
         self.out_channels = out_channels
-        self.n_channels = n_channels
+        self.in_channels = in_channels
         self.appx_mode = torch.tensor([0], requires_grad=False)
         self.weight = nn.Parameter(torch.rand(self.out_channels,
-                                              self.n_channels,
+                                              self.in_channels,
                                               self.kernel_size[0],
                                               self.kernel_size[1]))
         self.bias = nn.Parameter(torch.rand(self.out_channels))

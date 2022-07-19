@@ -45,7 +45,7 @@ def train_vanilla(model, train_loader, test_loader, args, model_path, logfile, d
     best_test_acc = -1.
 
     for epoch in range(args['num_epochs']):
-        for data, target in tqdm(train_loader):
+        for data, target in tqdm(train_loader, leave=False):
             data = data.to(device)
             target = target.to(device)
             model.train()
@@ -64,7 +64,7 @@ def train_vanilla(model, train_loader, test_loader, args, model_path, logfile, d
             torch.save(model.state_dict(), os.path.join(model_path, 'ckpt_best.pt'))
             print_log(logfile, 'Best test accuracy achieved on epoch {}.'.format(epoch + 1))
         model.save(os.path.join(model_path, 'ckpt_last'))
-        if epoch % 50 == 0 and epoch > 10:
+        if epoch % 25 == 0 and epoch > 10:
             # Every 50 epochs, run the attacks to see how this changes.
             # attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
             # print_log(logfile, 'Adversarial testing.')
@@ -87,7 +87,7 @@ def train_stochastic(model, train_loader, test_loader, args, model_path, logfile
     best_test_acc = -1.
 
     for epoch in range(args['num_epochs']):
-        for data, target in tqdm(train_loader):
+        for data, target in tqdm(train_loader, leave=False):
             data = data.to(device)
             target = target.to(device)
             model.train()
@@ -115,7 +115,7 @@ def train_stochastic(model, train_loader, test_loader, args, model_path, logfile
             print_log(logfile, 'Best test accuracy achieved on epoch {}.'.format(epoch + 1))
         model.save(os.path.join(model_path, 'ckpt_last'))
 
-        if epoch % 50 == 0 and epoch > 10:
+        if epoch % 25 == 0 and epoch > 10:
             # Every 50 epochs, run the attacks to see how this changes.
             # attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
             # print_log(logfile, 'Adversarial testing.')
@@ -142,7 +142,7 @@ def train_stochastic_adversarial(model, train_loader, test_loader, args, model_p
     best_test_acc = -1.
 
     for epoch in range(args['num_epochs']):
-        for data, target in tqdm(train_loader):
+        for data, target in tqdm(train_loader, leave=False):
             data = data.to(device)
             target = target.to(device)
             perturbed_data = attack_func(model, data, target, epsilon=args['epsilon']).to(device)
@@ -174,7 +174,7 @@ def train_stochastic_adversarial(model, train_loader, test_loader, args, model_p
             model.save(os.path.join(model_path, 'ckpt_best'))
             print_log(logfile, 'Best test accuracy achieved on epoch {}.'.format(epoch + 1))
         model.save(os.path.join(model_path, 'ckpt_last'))
-        if epoch % 50 == 0 and epoch > 10:
+        if epoch % 25 == 0 and epoch > 10:
             # Every 50 epochs, run the attacks to see how this changes.
             # attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
             # print_log(logfile, 'Adversarial testing.')

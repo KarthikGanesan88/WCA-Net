@@ -1,6 +1,9 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as f
-
+from .common import VanillaBase, WCANet_Base
+from torch.distributions.normal import Normal
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 def conv1x1(in_planes, out_planes, stride=1, padding=0):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, padding=padding, bias=False)
@@ -94,3 +97,186 @@ def resnet18():
 
 def resnet152():
     return ResNet(Bottleneck, [3, 8, 36, 3])
+
+
+class GeneratorResNet18(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.rn = resnet18()
+
+    def forward(self, x):
+        x = self.rn(x)
+        return x
+
+
+class VanillaResNet18(VanillaBase):
+    def __init__(self, D, C):
+        super().__init__()
+        self.gen = GeneratorResNet18()
+        self.fc1 = nn.Linear(512, D)
+        self.proto = nn.Linear(D, C)
+
+    def forward(self, x):
+        x = self.gen(x)
+        x = f.relu(self.fc1(x))
+        x = self.proto(x)
+        return x
+
+
+class ResNet18_StochasticBaseDiagonal(nn.Module):
+    """ Zero mean, trainable variance. """
+
+    def __init__(self, D, disable_noise=False):
+        super().__init__()
+        self.gen = GeneratorResNet18()
+        self.fc1 = nn.Linear(512, D)
+        self.sigma = nn.Parameter(torch.rand(D), requires_grad=(not disable_noise))
+        self.disable_noise = disable_noise
+
+    def forward(self, x):
+        x = self.gen(x)
+        x = f.relu(self.fc1(x))
+        if not self.disable_noise:
+            dist = Normal(0., f.softplus(self.sigma))
+            x_sample = dist.rsample()
+            x = x + x_sample
+        return x
+
+
+class ResNet18_StochasticBaseMultivariate(nn.Module):
+    """ Trainable lower triangular matrix L, so Sigma=LL^T. """
+
+    def __init__(self, D, disable_noise=False):
+        super().__init__()
+        self.gen = GeneratorResNet18()
+        self.fc1 = nn.Linear(512, D)
+        self.mu = nn.Parameter(torch.zeros(D), requires_grad=False)
+        self.L = nn.Parameter(torch.rand(D, D).tril(), requires_grad=(not disable_noise))
+        self.disable_noise = disable_noise
+
+    @property
+    def sigma(self):
+        return self.L @ self.L.T
+
+    def forward(self, x):
+        x = self.gen(x)
+        x = f.relu(self.fc1(x))
+        if not self.disable_noise:
+            dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
+            x_sample = dist.rsample()
+            x = x + x_sample
+        return x
+
+class WCANet_ResNet18(WCANet_Base):
+    def __init__(self, D, C, variance_type, disable_noise=False):
+        super().__init__()
+        if variance_type == 'isotropic':
+            self.base = ResNet18_StochasticBaseDiagonal(D, disable_noise=disable_noise)
+        elif variance_type == 'anisotropic':
+            self.base = ResNet18_StochasticBaseMultivariate(D, disable_noise=disable_noise)
+        self.proto = nn.Linear(D, C)
+
+    @property
+    def sigma(self):
+        return self.base.sigma
+
+    def forward(self, x):
+        x = self.base(x)
+        x = self.proto(x)
+        return x
+
+########################################################
+#    ResNet152
+########################################################
+
+class GeneratorResNet152(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.rn = resnet152()
+
+    def forward(self, x):
+        x = self.rn(x)
+        return x
+
+
+class VanillaResNet152(VanillaBase):
+    def __init__(self, D, C):
+        super().__init__()
+        self.gen = GeneratorResNet152()
+        self.fc1 = nn.Linear(512, D)
+        self.proto = nn.Linear(D, C)
+
+    def forward(self, x):
+        x = self.gen(x)
+        x = f.relu(self.fc1(x))
+        x = self.proto(x)
+        return x
+
+    def save(self, filename):
+        torch.save(self.state_dict(), filename + ".pt")
+
+    def load(self, filename):
+        self.load_state_dict(torch.load(filename + ".pt"))
+
+
+class ResNet152_StochasticBaseDiagonal(nn.Module):
+    """ Zero mean, trainable variance. """
+
+    def __init__(self, D, disable_noise=False):
+        super().__init__()
+        self.gen = GeneratorResNet152()
+        self.fc1 = nn.Linear(2048, D)
+        self.sigma = nn.Parameter(torch.rand(D), requires_grad=(not disable_noise))
+        self.disable_noise = disable_noise
+
+    def forward(self, x):
+        x = self.gen(x)
+        x = f.relu(self.fc1(x))
+        if not self.disable_noise:
+            dist = Normal(0., f.softplus(self.sigma))
+            x_sample = dist.rsample()
+            x = x + x_sample
+        return x
+
+
+class ResNet152_StochasticBaseMultivariate(nn.Module):
+    """ Trainable lower triangular matrix L, so Sigma=LL^T. """
+
+    def __init__(self, D, disable_noise=False):
+        super().__init__()
+        self.gen = GeneratorResNet152()
+        self.fc1 = nn.Linear(2048, D)
+        self.mu = nn.Parameter(torch.zeros(D), requires_grad=False)
+        self.L = nn.Parameter(torch.rand(D, D).tril(), requires_grad=(not disable_noise))
+        self.disable_noise = disable_noise
+
+    @property
+    def sigma(self):
+        return self.L @ self.L.T
+
+    def forward(self, x):
+        x = self.gen(x)
+        x = f.relu(self.fc1(x))
+        if not self.disable_noise:
+            dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
+            x_sample = dist.rsample()
+            x = x + x_sample
+        return x
+
+class WCANet_ResNet152(WCANet_Base):
+    def __init__(self, D, C, variance_type, disable_noise=False):
+        super().__init__()
+        if variance_type == 'isotropic':
+            self.base = ResNet152_StochasticBaseDiagonal(D, disable_noise=disable_noise)
+        elif variance_type == 'anisotropic':
+            self.base = ResNet152_StochasticBaseMultivariate(D, disable_noise=disable_noise)
+        self.proto = nn.Linear(D, C)
+
+    @property
+    def sigma(self):
+        return self.base.sigma
+
+    def forward(self, x):
+        x = self.base(x)
+        x = self.proto(x)
+        return x
