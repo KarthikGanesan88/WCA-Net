@@ -1,4 +1,5 @@
-.vscode/
+approx/build/*
+approx/dist/*
 
 __pycache__/
 
