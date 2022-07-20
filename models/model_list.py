@@ -3,16 +3,21 @@ from .resnet import VanillaResNet18, WCANet_ResNet18
 from .lenet import VanillaLeNet, WCANet_LeNet
 from .lenetplus import VanillaLeNetPlus, WCANet_LeNetPlus
 from .wideresnet import VanillaWideResNet32, WCANet_WideResNet32
+from .alexnet import VanillaAlexNet, WCANet_AlexNet
 
 def model_factory(model, dataset, training_type, variance_type, feature_dim, num_classes):
     model_list = {
         'lenet': {
             'vanilla': VanillaLeNet,
-            'stochastic': WCANet_LeNet,
+            'stochastic': WCANet_LeNet
         },
         'lenetplus': {
             'vanilla': VanillaLeNetPlus,
-            'stochastic': WCANet_LeNetPlus,
+            'stochastic': WCANet_LeNetPlus
+        },
+        'alexnet': {
+            'vanilla': VanillaAlexNet,
+            'stochastic': WCANet_AlexNet
         },
         'resnet18': {
             'vanilla': VanillaResNet18,

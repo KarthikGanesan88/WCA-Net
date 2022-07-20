@@ -2,10 +2,12 @@ import os
 
 import torch
 
-eps_names_mnist = ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5']
-eps_values_mnist = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+# eps_names_mnist = ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5']
+# eps_values_mnist = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 # eps_names_cifar = ['  0/255', '  1/255', '  2/255', '  4/255', '  8/255', ' 16/255', ' 32/255', ' 64/255', '128/255']
 # eps_values_cifar = [0. / 255, 1. / 255, 2. / 255, 4. / 255, 8. / 255, 16. / 255, 32. / 255, 64. / 255, 128. / 255]
+eps_names_mnist = ['0.3']
+eps_values_mnist = [0.3]
 eps_names_cifar = ['  8/255']
 eps_values_cifar = [8. / 255]
 
