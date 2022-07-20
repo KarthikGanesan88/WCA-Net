@@ -251,9 +251,16 @@ def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var
 def train(args, device):
     print(args)
 
-    train_type = args['var_type'] if args['training_type'] == "stochastic" else args['training_type']
+    if args['training_type'] == "stochastic":
+        train_type = args['var_type']
+    elif args['training_type'] == "stochastic+adversarial":
+        train_type = "adversarial"
+    else:
+        train_type = args['training_type']
     model_path = os.path.join(
         f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+
+    print(f'Training type: {train_type}')
 
     os.makedirs(model_path, exist_ok=True)
     logfile = os.path.join(model_path, f'{datetime.now().strftime("%Y_%M_%d_%H_%M_%S")}.log')
@@ -267,7 +274,10 @@ def train(args, device):
     train_loader = get_data_loader(args['dataset'], args['batch_size'], train=True, shuffle=True, drop_last=True)
     test_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False, drop_last=False)
     model = model_factory(args['model'],
-                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
+                          args['dataset'],
+                          train_type,
+                          args['var_type'],
+                          args['feature_dim'],
                           args['num_classes'])
     model.to(device)
 
@@ -292,16 +302,26 @@ def train(args, device):
 
 def test_multiple(args, device):
     print(args)
-    model = model_factory(args['model'],
-                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
-                          args['num_classes'])
-    model.to(device)
 
-    train_type = args['var_type'] if args['training_type'] == "stochastic" else args['training_type']
+    if args['training_type'] == "stochastic":
+        train_type = args['var_type']
+    elif args['training_type'] == "stochastic+adversarial":
+        train_type = "adversarial"
+    else:
+        train_type = args['training_type']
     model_path = os.path.join(
         f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
 
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+
+    model = model_factory(args['model'],
+                          args['dataset'],
+                          # args['training_type'],
+                          train_type,
+                          args['var_type'],
+                          args['feature_dim'],
+                          args['num_classes'])
+    model.to(device)
 
     # To test multiple models in one run.
     for model_num in range(50, args['num_epochs'], 50):
@@ -334,14 +354,25 @@ def test_multiple(args, device):
 
 def test(args, device):
     print(args)
-    model = model_factory(args['model'],
-                          args['dataset'], args['training_type'], args['var_type'], args['feature_dim'],
-                          args['num_classes'])
-    model.to(device)
 
-    train_type = args['var_type'] if args['training_type'] == "stochastic" else args['training_type']
+    if args['training_type'] == "stochastic":
+        train_type = args['var_type']
+    elif args['training_type'] == "stochastic+adversarial":
+        train_type = "adversarial"
+    else:
+        train_type = args['training_type']
+
     model_path = os.path.join(
         f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+
+    model = model_factory(args['model'],
+                          args['dataset'],
+                          # args['training_type'],
+                          train_type,
+                          args['var_type'],
+                          args['feature_dim'],
+                          args['num_classes'])
+    model.to(device)
 
     # model.load(os.path.join(model_path, 'ckpt_best'))
     model.load(os.path.join(model_path, 'ckpt_last'))
