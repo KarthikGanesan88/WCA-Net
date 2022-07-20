@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import torch
 
@@ -74,8 +75,11 @@ def normalize_generic(t):
 #########################################################
 
 import torch.nn as nn
-from custom.custom_conv import CustomConv
-from custom.custom_fc import CustomLinear
+try:
+    from custom.custom_conv import CustomConv
+    from custom.custom_fc import CustomLinear
+except ImportError:
+    warnings.warn('Custom layers not found.', ImportWarning)
 
 def modify_layers(model):
     # Dict of custom layers, selected based on layer type and model type.

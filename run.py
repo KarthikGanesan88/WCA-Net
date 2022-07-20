@@ -15,9 +15,13 @@ from utils import attack_to_dataset_config, print_log, modify_layers
 import metrics
 from metrics import accuracy as accuracy
 # from resnet_folded import VanillaResNet18_folded
+import warnings
 
-from custom.custom_conv import CustomConv
-from custom.custom_fc import CustomLinear
+try:
+    from custom.custom_conv import CustomConv
+    from custom.custom_fc import CustomLinear
+except ImportError:
+    warnings.warn('Custom layers not found.', ImportWarning)
 
 def parse_args():
     mode = sys.argv[1]
