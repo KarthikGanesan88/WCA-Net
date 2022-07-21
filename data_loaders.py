@@ -11,12 +11,12 @@ def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=Tru
         tr = transforms.Compose([
             transforms.ToTensor(),
         ])
-        d = datasets.MNIST('./data', train=train, transform=tr)
+        d = datasets.MNIST('./data', train=train, transform=tr, download=True)
     if dataset == 'fmnist':
         tr = transforms.Compose([
             transforms.ToTensor(),
         ])
-        d = datasets.FashionMNIST('./data', train=train, transform=tr)
+        d = datasets.FashionMNIST('./data', train=train, transform=tr, download=True)
     elif dataset == 'cifar10':
         if train:
             tr = transforms.Compose([
@@ -28,7 +28,7 @@ def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=Tru
             tr = transforms.Compose([
                 transforms.ToTensor(),
             ])
-        d = datasets.CIFAR10('./data', train=train, transform=tr)
+        d = datasets.CIFAR10('./data', train=train, transform=tr, download=True)
     elif dataset == 'cifar100':
         if train:
             tr = transforms.Compose([
@@ -40,7 +40,7 @@ def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=Tru
             tr = transforms.Compose([
                 transforms.ToTensor(),
             ])
-        d = datasets.CIFAR100('./data', train=train, transform=tr)
+        d = datasets.CIFAR100('./data', train=train, transform=tr, download=True)
     elif dataset == 'svhn':
         if train:
             tr = transforms.Compose([
@@ -51,6 +51,6 @@ def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=Tru
                 transforms.ToTensor(),
             ])
         split = 'train' if train else 'test'
-        d = datasets.SVHN('./data', split=split, transform=tr)
+        d = datasets.SVHN('./data', split=split, transform=tr, download=True)
     data_loader = torch.utils.data.DataLoader(d, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last)
     return data_loader
