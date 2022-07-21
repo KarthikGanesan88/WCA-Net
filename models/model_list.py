@@ -9,39 +9,39 @@ def model_factory(model, dataset, training_type, variance_type, feature_dim, num
     model_list = {
         'lenet': {
             'vanilla': VanillaLeNet,
-            'stochastic': WCANet_LeNet,
+            'anisotropic': WCANet_LeNet,
             'adversarial': WCANet_LeNet
         },
         'lenetplus': {
             'vanilla': VanillaLeNetPlus,
-            'stochastic': WCANet_LeNetPlus,
+            'anisotropic': WCANet_LeNetPlus,
             'adversarial': WCANet_LeNetPlus
         },
         'alexnet': {
             'vanilla': VanillaAlexNet,
-            'stochastic': WCANet_AlexNet,
+            'anisotropic': WCANet_AlexNet,
             'adversarial': WCANet_AlexNet
         },
         'resnet18': {
             'vanilla': VanillaResNet18,
-            'stochastic': WCANet_ResNet18,
+            'anisotropic': WCANet_ResNet18,
             'adversarial': WCANet_ResNet18
         },
         'preactresnet18': {
             'vanilla': VanillaPreActResNet18,
-            'stochastic': WCANet_PreActResNet18,
+            'anisotropic': WCANet_PreActResNet18,
             'adversarial': WCANet_PreActResNet18
         },
         'wideresnet32': {
             'vanilla': VanillaWideResNet32,
-            'stochastic': WCANet_WideResNet32,
+            'anisotropic': WCANet_WideResNet32,
             'adversarial': WCANet_WideResNet32
         },
     }
-    print('training type (in model_factor)', training_type)
+    print('training type (in model_factory)', training_type)
     if training_type == 'vanilla':
         return model_list[model][training_type](feature_dim, num_classes)
-    elif training_type in ['stochastic', 'adversarial']:
+    elif training_type in ['anisotropic', 'adversarial']:
         return model_list[model][training_type](feature_dim, num_classes, variance_type)
 
 """
