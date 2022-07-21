@@ -30,6 +30,8 @@ def parse_args():
     config_file = sys.argv[2]
     with open(config_file, 'r') as fp:
         args = json.loads(fp.read().strip())
+
+    args['run_id'] = int(sys.argv[3]) if len(sys.argv) > 2 else -1
     return mode, args
 
 
@@ -261,8 +263,15 @@ def train(args, device):
         train_type = "adversarial"
     else:
         train_type = args['training_type']
-    model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+
+    # Add support for training lots of models at once.
+
+    if args['run_id'] != -1:
+        model_path = os.path.join(
+            f"./output/{args['model']}_{args['dataset']}_{train_type}_runid{args['run_id']}")
+    else:
+        model_path = os.path.join(
+            f"./output/{args['model']}_{args['dataset']}_{train_type}")
 
     print(f'Training type: {train_type}')
 
@@ -314,7 +323,7 @@ def test_multiple(args, device):
     else:
         train_type = args['training_type']
     model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+        f"./output/{args['model']}_{args['dataset']}_{train_type}")
 
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 
@@ -367,7 +376,7 @@ def test(args, device):
         train_type = args['training_type']
 
     model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+        f"./output/{args['model']}_{args['dataset']}_{train_type}")
 
     model = model_factory(args['model'],
                           args['dataset'],
