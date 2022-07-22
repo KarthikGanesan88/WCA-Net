@@ -1,6 +1,6 @@
 {
-    "model": "wideresnet32",
-    "dataset": "cifar10",
+    "model": "preactresnet18",
+    "dataset": "svhn",
     "num_classes": 10,
     "pretrained": null,
     "batch_size": 128,

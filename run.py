@@ -426,7 +426,7 @@ def test(args, device):
         train_type = args['training_type']
 
     model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
+        f"./output/{args['model']}_{args['dataset']}_{train_type}")
 
     model = model_factory(args['model'],
                           args['dataset'],
@@ -445,7 +445,7 @@ def test(args, device):
     test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
     print(f'Accuracy: {100. * test_acc:.3f}%')
 
-    attack_names = ['FGSM', 'PGD']  # 'BIM', 'C&W', 'Few-Pixel'
+    attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
     print('Adversarial testing.')
     for idx, attack in enumerate(attack_names):
         print('Attack: {}'.format(attack))

@@ -6,6 +6,7 @@ from .common import VanillaBase, WCANet_Base
 from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal
 
+
 class PreActBlock(nn.Module):
     """Pre-activation version of the BasicBlock."""
     expansion = 1
@@ -125,6 +126,13 @@ class PreActResNet18_StochasticBaseMultivariate(nn.Module):
         self.mu = nn.Parameter(torch.zeros(D), requires_grad=False)
         self.L = nn.Parameter(torch.rand(D, D).tril(), requires_grad=(not disable_noise))
         self.disable_noise = disable_noise
+        self.D = D
+
+        # if not self.disable_noise:
+        #     print('Generating stored points inside init.')
+        #     self.num_points = 2**7
+        #     dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
+        #     self.stored_points = dist.sample(sample_shape=torch.Size([self.num_points // self.D])).flatten()
 
     @property
     def sigma(self):
@@ -136,6 +144,10 @@ class PreActResNet18_StochasticBaseMultivariate(nn.Module):
         if not self.disable_noise:
             dist = MultivariateNormal(self.mu, scale_tril=self.L, validate_args=False)
             x_sample = dist.rsample()
+            # x_sample = self.stored_points[torch.randint(high=self.num_points,
+            #                                             size=(x.shape[0], self.D)
+            #                                             )
+            # ].cuda()
             x = x + x_sample
         return x
 

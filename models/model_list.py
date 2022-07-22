@@ -38,7 +38,7 @@ def model_factory(model, dataset, training_type, variance_type, feature_dim, num
             'adversarial': WCANet_WideResNet32
         },
     }
-    print('training type (in model_factory)', training_type)
+    # print('training type (in model_factory)', training_type)
     if training_type == 'vanilla':
         return model_list[model][training_type](feature_dim, num_classes)
     elif training_type in ['anisotropic', 'adversarial']:

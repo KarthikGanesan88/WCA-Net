@@ -7,3 +7,4 @@ output
 /approx/build/*
 /approx/cuda_matmul.egg-info/*
 /approx/dist/*
+/test_mvn.py

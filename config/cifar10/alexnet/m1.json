@@ -1,5 +1,5 @@
 {
-    "model": "wideresnet32",
+    "model": "alexnet",
     "dataset": "cifar10",
     "num_classes": 10,
     "pretrained": null,
@@ -9,7 +9,7 @@
     "lr": 0.001,
     "wd": 0.0001,
     "training_type": "stochastic",
-    "var_type": "anisotropic",
+    "var_type": "isotropic",
     "device": "cuda",
     "monte_carlo_runs": 50
 }
