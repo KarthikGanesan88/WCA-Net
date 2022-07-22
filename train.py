@@ -12,6 +12,7 @@ from metrics import accuracy
 from utils import normalize_cifar10, normalize_cifar100, normalize_generic, attack_to_dataset_config, print_log
 from test import test_attack
 
+
 def get_stochastic_model_optimizer(model, args):
     if args['var_type'] == 'isotropic':
         trainable_noise_params = {'params': model.base.sigma, 'lr': args['lr'], 'weight_decay': args['wd']}
@@ -77,6 +78,7 @@ def train_vanilla(model, train_loader, test_loader, args, model_path, logfile, d
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
 
+
 def train_stochastic(model, train_loader, test_loader, args, model_path, logfile, device='cpu'):
     optimizer = get_stochastic_model_optimizer(model, args)
     scheduler = StepLR(optimizer, int(args['num_epochs'] / 3), 0.1)
@@ -113,6 +115,11 @@ def train_stochastic(model, train_loader, test_loader, args, model_path, logfile
             best_test_acc = test_acc
             model.save(os.path.join(model_path, 'ckpt_best'))
             print_log(logfile, 'Best test accuracy achieved on epoch {}.'.format(epoch + 1))
+            if epoch >= 50:
+                if best_test_acc < 0.5:
+                    print_log(logfile, 'After 50 epochs, model has failed to reach 50% test accuracy. Aborting '
+                                       'training.')
+
         model.save(os.path.join(model_path, 'ckpt_last'))
 
         if epoch % 25 == 0 and epoch > 10:
@@ -127,6 +134,7 @@ def train_stochastic(model, train_loader, test_loader, args, model_path, logfile
             #         print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
+
 
 def train_stochastic_adversarial(model, train_loader, test_loader, args, model_path, logfile, device='cpu'):
     optimizer = get_stochastic_model_optimizer(model, args)

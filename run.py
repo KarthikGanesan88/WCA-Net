@@ -313,6 +313,11 @@ def train(args, device):
                 args['training_type']))
     print_log(logfile, 'Finished training.')
 
+def print_log(log, print_string, enable_logging=False):
+    if enable_logging:
+        log.write('{}\n'.format(print_string))
+        log.flush()
+
 def test_multiple(args, device):
     print(args)
 
@@ -322,8 +327,26 @@ def test_multiple(args, device):
         train_type = "adversarial"
     else:
         train_type = args['training_type']
-    model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{train_type}")
+
+    attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+
+    # if this is to test a bunch of runs, accept the runid here.
+    if args['run_id'] != -1:
+        model_path = os.path.join(
+            f"./output/{args['model']}_{args['dataset']}_{train_type}_runid{args['run_id']}")
+
+        enable_logging = True
+
+        logfile = f"./output/logs/{args['model']}_{args['dataset']}.log"
+        log = open(logfile, 'a')
+        # log.write(f'Run ID, best epoch, best robust accuracy, classification accuracy at best epoch\n')
+        log.flush()
+
+    else:
+        model_path = os.path.join(
+            f"./output/{args['model']}_{args['dataset']}_{train_type}")
+        enable_logging = False
+        log = None
 
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 
@@ -336,16 +359,27 @@ def test_multiple(args, device):
                           args['num_classes'])
     model.to(device)
 
+    accuracy_dict = {}
+    robust_dict = {}
+    # robust_dict = dict.fromkeys(attack_names, {})  # This only supports a single epsilon per attack for now.
+
     # To test multiple models in one run.
-    for model_num in range(50, args['num_epochs'], 50):
-        print(f'Running model saved at epoch: {model_num}')
-        model.load(os.path.join(model_path, f'ckpt_{model_num}'))
+    for epoch in range(25, args['num_epochs'], 25):
+        if os.path.exists(os.path.join(model_path, f'ckpt_{epoch}.pt')):
+            model.load(os.path.join(model_path, f'ckpt_{epoch}'))
+        else:
+            # Checkpoints past this epoch number do not exist.
+            break
+
+        print(f'\nRunning model saved at epoch: {epoch}')
         model.eval()
 
         test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
-        print(f'Accuracy: {100. * test_acc:.3f}%\n\n')
+        acc = 100. * test_acc
+        print(f'Accuracy: {acc:.3f}%')
+        accuracy_dict[epoch] = acc
+        # print_log(log, f"{args['run_id']}, {model_num}, {acc}", enable_logging=enable_logging)
 
-        attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
         print('Adversarial testing.')
         for idx, attack in enumerate(attack_names):
             print('Attack: {}'.format(attack))
@@ -363,7 +397,23 @@ def test_multiple(args, device):
                 robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device)
                 for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
                     print('Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100. * acc.item()))
+                    robust_dict[epoch] = acc
         print('Finished testing.')
+
+    # Need to do this outside the main for loop.
+    best_epoch = -1
+    best_acc = 0
+    for epoch, acc in robust_dict.items():
+        if acc > best_acc:
+            best_acc = acc
+            best_epoch = epoch
+
+    # log.write(f'Run ID, best epoch, best robust accuracy, classification accuracy at best epoch')
+    print_log(log, f"{args['run_id']}, {best_epoch}, {best_acc}, {accuracy_dict[best_epoch]}",
+              enable_logging=enable_logging)
+
+    if args['run_id'] != -1:
+        log.close()
 
 def test(args, device):
     print(args)
@@ -376,7 +426,7 @@ def test(args, device):
         train_type = args['training_type']
 
     model_path = os.path.join(
-        f"./output/{args['model']}_{args['dataset']}_{train_type}")
+        f"./output/{args['model']}_{args['dataset']}_{train_type}_{args['feature_dim']}")
 
     model = model_factory(args['model'],
                           args['dataset'],
@@ -387,8 +437,8 @@ def test(args, device):
                           args['num_classes'])
     model.to(device)
 
-    # model.load(os.path.join(model_path, 'ckpt_best'))
-    model.load(os.path.join(model_path, 'ckpt_last'))
+    model.load(os.path.join(model_path, 'ckpt_best'))
+    # model.load(os.path.join(model_path, 'ckpt_last'))
     model.eval()
     test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 

@@ -7,6 +7,7 @@ from foolbox.attacks import LinfFastGradientAttack, LinfProjectedGradientDescent
 attacks = {
     'FGSM': LinfFastGradientAttack(),
     'PGD': LinfProjectedGradientDescentAttack(rel_stepsize=0.1, steps=10),
+    # 'PGD': LinfProjectedGradientDescentAttack(abs_stepsize=2/255, steps=50),
     'BIM': LinfBasicIterativeAttack(rel_stepsize=0.1, steps=1000),
     'C&W': L2CarliniWagnerAttack(steps=1000, stepsize=5e-4, confidence=0., initial_const=1e-3),
 }
