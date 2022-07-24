@@ -10,7 +10,7 @@ from attacks.one_pixel import one_pixel_attack
 from data_loaders import get_data_loader
 from models.model_list import model_factory
 from test import test_attack
-from train import train_vanilla, train_stochastic, train_stochastic_adversarial, get_norm_func
+from train import train_vanilla, train_stochastic, train_stochastic_adversarial, train_adversarial, get_norm_func
 from utils import attack_to_dataset_config, print_log, modify_layers
 import metrics
 from metrics import accuracy as accuracy
@@ -257,7 +257,7 @@ def train(args, device):
 
     if args['training_type'] == "stochastic":
         train_type = args['var_type']
-    elif args['training_type'] == "stochastic+adversarial":
+    elif args['training_type'] == "adversarial":
         train_type = "adversarial"
     else:
         train_type = args['training_type']
@@ -305,6 +305,9 @@ def train(args, device):
     elif args['training_type'] == 'stochastic+adversarial':
         print_log(logfile, 'Adversarial stochastic training.')
         train_stochastic_adversarial(model, train_loader, test_loader, args, model_path, logfile, device=device)
+    elif args['training_type'] == 'adversarial':
+        print_log(logfile, 'Adversarial training.')
+        train_adversarial(model, train_loader, test_loader, args, model_path, logfile, device=device)
     else:
         raise NotImplementedError(
             'Training "{}" not implemented. Supported: [vanilla|stochastic|stochastic+adversarial].'.format(
