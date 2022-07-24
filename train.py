@@ -79,6 +79,41 @@ def train_vanilla(model, train_loader, test_loader, args, model_path, logfile, d
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
 
 
+def train_adversarial(model, train_loader, test_loader, args, model_path, logfile, device='cpu'):
+    optimizer = Adam(model.parameters(), lr=args['lr'], weight_decay=args['wd'])
+    loss_func = nn.CrossEntropyLoss()
+    norm_func = get_norm_func(args)
+    best_test_acc = -1.
+    attack_func = pgd
+
+    for epoch in range(args['num_epochs']):
+        for data, target in tqdm(train_loader, leave=False):
+            data = data.to(device)
+            target = target.to(device)
+            perturbed_data = attack_func(model, data, target, epsilon=args['epsilon']).to(device)
+            model.train()
+            if norm_func is not None:
+                data = norm_func(data)
+                perturbed_data = norm_func(perturbed_data)
+            logits = model(data)
+            adv_logits = model(perturbed_data)
+            optimizer.zero_grad()
+            clean_loss = loss_func(logits, target)
+            adv_loss = loss_func(adv_logits, target)
+            loss = 0.5 * clean_loss + 0.5 * adv_loss
+            loss.backward()
+            optimizer.step()
+        train_acc = accuracy(model, train_loader, device=device, norm=norm_func)
+        test_acc = accuracy(model, test_loader, device=device, norm=norm_func)
+        print_log(logfile, 'Epoch {:03}, Train acc: {:.3f}, Test acc: {:.3f}'.format(epoch + 1, train_acc, test_acc))
+        if test_acc > best_test_acc:
+            best_test_acc = test_acc
+            torch.save(model.state_dict(), os.path.join(model_path, 'ckpt_best.pt'))
+            print_log(logfile, 'Best test accuracy achieved on epoch {}.'.format(epoch + 1))
+        model.save(os.path.join(model_path, 'ckpt_last'))
+        if epoch % 25 == 0 and epoch > 10:
+            torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
+
 def train_stochastic(model, train_loader, test_loader, args, model_path, logfile, device='cpu'):
     optimizer = get_stochastic_model_optimizer(model, args)
     scheduler = StepLR(optimizer, int(args['num_epochs'] / 3), 0.1)
