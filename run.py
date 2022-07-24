@@ -25,7 +25,7 @@ except ImportError:
 
 def parse_args():
     mode = sys.argv[1]
-    if mode not in ('train', 'test', 'train+test', 'quantize', 'test_multiple'):
+    if mode not in ('train', 'test', 'train+test', 'test_DA', 'test_multiple'):
         raise ValueError()
     config_file = sys.argv[2]
     with open(config_file, 'r') as fp:
@@ -107,8 +107,6 @@ def quantize(args, device):
         if 'scale' in key.split('.') or 'zero_point' in key.split('.'):
             print(key, value)
     breakpoint()
-"""
-
 
 def quantize(args, device):
     print(args)
@@ -252,7 +250,7 @@ def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var
     breakpoint()
     return new_weights, new_bias
     '''
-
+"""
 
 def train(args, device):
     print(args)
@@ -415,6 +413,43 @@ def test_multiple(args, device):
     if args['run_id'] != -1:
         log.close()
 
+def test_DA(args, device):
+    print(args)
+
+    if args['training_type'] == "stochastic":
+        train_type = args['var_type']
+    elif args['training_type'] == "stochastic+adversarial":
+        train_type = "adversarial"
+    else:
+        train_type = args['training_type']
+
+    model_path = os.path.join(
+        f"./output/{args['model']}_{args['dataset']}_{train_type}")
+
+    model = model_factory(args['model'],
+                          args['dataset'],
+                          # args['training_type'],
+                          train_type,
+                          args['var_type'],
+                          args['feature_dim'],
+                          args['num_classes'])
+    model.to(device)
+
+    model.load(os.path.join(model_path, 'ckpt_best'))
+
+    modify_layers(model)
+
+    for name, layer in model.named_modules():
+        if isinstance(layer, CustomConv) or isinstance(layer, CustomLinear):
+            layer.appx_mode = torch.Tensor([1]).cuda()
+            # print(f'{name}: Appx mode:{layer.appx_mode}')
+
+    model.eval()
+    test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+
+    test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
+    print(f'DA accuracy: {100. * test_acc:.3f}%')
+
 def test(args, device):
     print(args)
 
@@ -445,7 +480,7 @@ def test(args, device):
     test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
     print(f'Accuracy: {100. * test_acc:.3f}%')
 
-    attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+    attack_names = ['FGSM', 'PGD']  # 'BIM', 'C&W', 'Few-Pixel'
     print('Adversarial testing.')
     for idx, attack in enumerate(attack_names):
         print('Attack: {}'.format(attack))
@@ -474,8 +509,8 @@ def main(mode, args):
         train(args, device)
     elif mode == 'test':
         test(args, device)
-    elif mode == 'quantize':
-        quantize(args, device)
+    elif mode == 'test_DA':
+        test_DA(args, device)
     elif mode == 'test_multiple':
         test_multiple(args, device)
     else:
