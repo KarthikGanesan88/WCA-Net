@@ -1,7 +1,7 @@
 {
     "model": "preactresnet18",
-    "dataset": "cifar10",
-    "num_classes": 10,
+    "dataset": "cifar100",
+    "num_classes": 100,
     "pretrained": null,
     "batch_size": 128,
     "num_epochs": 400,

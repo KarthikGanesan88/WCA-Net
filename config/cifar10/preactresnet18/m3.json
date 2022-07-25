@@ -11,7 +11,7 @@
     "training_type": "adversarial",
     "w_ct": 0.0,
     "w_at": 1.0,
-    "attack": "pgd",
+    "attack": "fgsm",
     "epsilon": 0.03,
     "var_type": "anisotropic",
     "device": "cuda",

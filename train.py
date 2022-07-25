@@ -84,7 +84,7 @@ def train_adversarial(model, train_loader, test_loader, args, model_path, logfil
     loss_func = nn.CrossEntropyLoss()
     norm_func = get_norm_func(args)
     best_test_acc = -1.
-    attack_func = pgd
+    attack_func = fgsm
 
     for epoch in range(args['num_epochs']):
         for data, target in tqdm(train_loader, leave=False):
