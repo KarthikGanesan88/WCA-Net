@@ -1,7 +1,6 @@
 import torch
 from torchvision import datasets, transforms
 
-
 def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=True):
     # Note that we do not normalize in the data loader, because we may use adv. examples
     # during training or testing.
@@ -53,4 +52,9 @@ def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=Tru
         split = 'train' if train else 'test'
         d = datasets.SVHN('./data', split=split, transform=tr, download=True)
     data_loader = torch.utils.data.DataLoader(d, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last)
-    return data_loader
+    if train:
+        return data_loader, None
+    else:
+        subset_dataset = torch.utils.data.Subset(d, range(1000))
+        subset_loader = torch.utils.data.DataLoader(dataset=subset_dataset, batch_size=batch_size, shuffle=False)
+        return data_loader, subset_loader

@@ -9,12 +9,12 @@ from tqdm.auto import tqdm
 from attacks.one_pixel import one_pixel_attack
 from data_loaders import get_data_loader
 from models.model_list import model_factory
-from test import test_attack
+from test import foolbox_attack
 from train import train_vanilla, train_stochastic, train_stochastic_adversarial, train_adversarial, get_norm_func
 from utils import attack_to_dataset_config, print_log, modify_layers
 import metrics
-from metrics import accuracy as accuracy
-# from resnet_folded import VanillaResNet18_folded
+from torchattacks import *
+
 import warnings
 
 try:
@@ -349,7 +349,7 @@ def test_multiple(args, device):
         enable_logging = False
         log = None
 
-    test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+    test_loader, _ = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 
     model = model_factory(args['model'],
                           args['dataset'],
@@ -395,7 +395,7 @@ def test_multiple(args, device):
             else:
                 eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
                 eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
-                robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device)
+                robust_accuracy = foolbox_attack(model, test_loader, attack, eps_values, args, device)
                 for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
                     print('Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100. * acc.item()))
                     robust_dict[epoch] = acc
@@ -448,7 +448,7 @@ def test_DA(args, device):
             # print(f'{name}: Appx mode:{layer.appx_mode}')
 
     model.eval()
-    test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+    test_loader, _ = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 
     test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
     print(f'DA accuracy: {100. * test_acc:.3f}%')
@@ -478,26 +478,37 @@ def test(args, device):
     model.load(os.path.join(model_path, 'ckpt_best'))
     # model.load(os.path.join(model_path, 'ckpt_last'))
     model.eval()
-    test_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
 
     test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
     print(f'Accuracy: {100. * test_acc:.3f}%')
 
-    attack_names = ['FGSM', 'PGD']  # 'BIM', 'C&W', 'Few-Pixel'
+    # attack_names = ['FGSM', 'PGD', 'C&W', 'Square', 'Pixle']
+    attack_names = ['DF', 'Square', 'Pixle']
+    eps_names, eps_values = ['8/255'], [8. / 255]
+
+    bb_attacks = {'Square': Square(model, eps=8. / 255),
+                  'Pixle': Pixle(model),
+                  'DF': DeepFool(model)
+                  }
+
     print('Adversarial testing.')
     for idx, attack in enumerate(attack_names):
         print('Attack: {}'.format(attack))
-        if attack == 'Few-Pixel':
-            if args['dataset'] == 'cifar10':
-                preproc = {'mean': [0.4914, 0.4822, 0.4465], 'std': [0.2023, 0.1994, 0.2010]}
-            else:
-                raise NotImplementedError('Only CIFAR-10 supported for the one-pixel attack.')
-            one_pixel_attack(
-                model, test_loader, preproc, device, pixels=1, targeted=False, maxiter=1000, popsize=400, verbose=False)
+        if attack in ['DF', 'Square', 'Pixle']:
+            correct, total = 0, 0
+            for i, (image, target) in enumerate(tqdm(subset_loader, leave=False)):
+                image, target = image.cuda(), target.cuda()
+                total += len(target)
+                adv_images = bb_attacks[attack](image, target)
+                output = model(adv_images)
+                _, preds = output.max(1)
+                correct += preds.eq(target).sum().item()
+            print(f'{attack} Accuracy:{100 * (correct / total)}%')
         else:
-            eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
-            eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
-            robust_accuracy = test_attack(model, test_loader, attack, eps_values, args, device)
+            # eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']
+            # eps_values = attack_to_dataset_config[attack][args['dataset']]['eps_values']
+            robust_accuracy = foolbox_attack(model, subset_loader, attack, eps_values, args, device)
             for eps_name, eps_value, acc in zip(eps_names, eps_values, robust_accuracy):
                 print('Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100. * acc.item()))
     print('Finished testing.')

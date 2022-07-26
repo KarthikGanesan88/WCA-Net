@@ -10,7 +10,7 @@ from attacks.fgsm import fgsm
 from attacks.pgd import pgd
 from metrics import accuracy
 from utils import normalize_cifar10, normalize_cifar100, normalize_generic, attack_to_dataset_config, print_log
-from test import test_attack
+from test import foolbox_attack
 
 
 def get_stochastic_model_optimizer(model, args):
@@ -77,7 +77,6 @@ def train_vanilla(model, train_loader, test_loader, args, model_path, logfile, d
             #         print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
-
 
 def train_adversarial(model, train_loader, test_loader, args, model_path, logfile, device='cpu'):
     optimizer = Adam(model.parameters(), lr=args['lr'], weight_decay=args['wd'])
@@ -229,3 +228,5 @@ def train_stochastic_adversarial(model, train_loader, test_loader, args, model_p
             #         print_log(logfile, 'Attack Strength: {}, Accuracy: {:.3f}%'.format(eps_name, 100.*acc.item()))
             # Also save the model separately each 50 epochs in case it performs better earlier.
             torch.save(model.state_dict(), os.path.join(model_path, f'ckpt_{epoch}.pt'))
+
+
