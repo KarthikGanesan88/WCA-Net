@@ -23,6 +23,7 @@ try:
 except ImportError:
     warnings.warn('Custom layers not found.', ImportWarning)
 
+
 def parse_args():
     mode = sys.argv[1]
     if mode not in ('train', 'test', 'train+test', 'test_DA', 'test_multiple'):
@@ -252,6 +253,7 @@ def fold_conv_and_bn(conv_weight, conv_bias, bn_weight, bn_bias, bn_mean, bn_var
     '''
 """
 
+
 def train(args, device):
     print(args)
 
@@ -282,8 +284,8 @@ def train(args, device):
     log.flush()
     log.close()
 
-    train_loader = get_data_loader(args['dataset'], args['batch_size'], train=True, shuffle=True, drop_last=True)
-    test_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False, drop_last=False)
+    train_loader, _ = get_data_loader(args['dataset'], args['batch_size'], train=True, shuffle=True, drop_last=True)
+    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False, drop_last=False)
     model = model_factory(args['model'],
                           args['dataset'],
                           train_type,
@@ -314,10 +316,12 @@ def train(args, device):
                 args['training_type']))
     print_log(logfile, 'Finished training.')
 
+
 def print_log(log, print_string, enable_logging=False):
     if enable_logging:
         log.write('{}\n'.format(print_string))
         log.flush()
+
 
 def test_multiple(args, device):
     print(args)
@@ -416,6 +420,7 @@ def test_multiple(args, device):
     if args['run_id'] != -1:
         log.close()
 
+
 def test_DA(args, device):
     print(args)
 
@@ -453,6 +458,7 @@ def test_DA(args, device):
     test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
     print(f'DA accuracy: {100. * test_acc:.3f}%')
 
+
 def test(args, device):
     print(args)
 
@@ -478,24 +484,26 @@ def test(args, device):
     model.load(os.path.join(model_path, 'ckpt_best'))
     # model.load(os.path.join(model_path, 'ckpt_last'))
     model.eval()
-    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False,
+                                                 drop_last=False, subset_size=1000)
 
-    test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
-    print(f'Accuracy: {100. * test_acc:.3f}%')
+    # test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
+    # print(f'Accuracy: {100. * test_acc:.3f}%')
 
     # attack_names = ['FGSM', 'PGD', 'C&W', 'Square', 'Pixle']
-    attack_names = ['DF', 'Square', 'Pixle']
+    attack_names = ['FGSM', 'CW']
     eps_names, eps_values = ['8/255'], [8. / 255]
 
-    bb_attacks = {'Square': Square(model, eps=8. / 255),
-                  'Pixle': Pixle(model),
-                  'DF': DeepFool(model)
-                  }
+    bb_attacks = {
+        'Square': Square(model, eps=8. / 255),
+        'Pixle': Pixle(model),
+        'CW': CW(model, kappa=0.1)
+    }
 
     print('Adversarial testing.')
     for idx, attack in enumerate(attack_names):
         print('Attack: {}'.format(attack))
-        if attack in ['DF', 'Square', 'Pixle']:
+        if attack in ['CW', 'Square', 'Pixle']:
             correct, total = 0, 0
             for i, (image, target) in enumerate(tqdm(subset_loader, leave=False)):
                 image, target = image.cuda(), target.cuda()

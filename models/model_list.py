@@ -4,6 +4,8 @@ from .lenet import VanillaLeNet, WCANet_LeNet
 from .lenetplus import VanillaLeNetPlus, WCANet_LeNetPlus
 from .wideresnet import VanillaWideResNet32, WCANet_WideResNet32
 from .alexnet import VanillaAlexNet, WCANet_AlexNet
+from .vgg16 import VanillaVGG16, WCANet_VGG16
+from .mobilenetv2 import VanillaMobileNetV2, WCANet_MobileNetV2
 
 def model_factory(model, dataset, training_type, variance_type, feature_dim, num_classes):
     model_list = {
@@ -21,6 +23,16 @@ def model_factory(model, dataset, training_type, variance_type, feature_dim, num
             'vanilla': VanillaAlexNet,
             'anisotropic': WCANet_AlexNet,
             'adversarial': WCANet_AlexNet
+        },
+        'vgg16': {
+            'vanilla': VanillaVGG16,
+            'anisotropic': WCANet_VGG16,
+            'adversarial': WCANet_VGG16
+        },
+        'mobilenetv2': {
+            'vanilla': VanillaMobileNetV2,
+            'anisotropic': WCANet_MobileNetV2,
+            'adversarial': WCANet_MobileNetV2
         },
         'resnet18': {
             'vanilla': VanillaResNet18,

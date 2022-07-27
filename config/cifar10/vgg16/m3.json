@@ -1,0 +1,19 @@
+{
+    "model": "preactresnet18",
+    "dataset": "cifar10",
+    "num_classes": 10,
+    "pretrained": null,
+    "batch_size": 64,
+    "num_epochs": 600,
+    "feature_dim": 32,
+    "lr": 0.01,
+    "wd": 0.0001,
+    "training_type": "adversarial",
+    "w_ct": 0.0,
+    "w_at": 1.0,
+    "attack": "fgsm",
+    "epsilon": 0.03,
+    "var_type": "anisotropic",
+    "device": "cuda",
+    "monte_carlo_runs": 50
+}

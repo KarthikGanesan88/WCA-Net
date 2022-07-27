@@ -1,7 +1,7 @@
 import torch
 from torchvision import datasets, transforms
 
-def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=True):
+def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=True, subset_size=None):
     # Note that we do not normalize in the data loader, because we may use adv. examples
     # during training or testing.
     if dataset not in ('mnist', 'fmnist', 'cifar10', 'cifar100', 'svhn'):
@@ -55,6 +55,7 @@ def get_data_loader(dataset, batch_size, train=True, shuffle=True, drop_last=Tru
     if train:
         return data_loader, None
     else:
-        subset_dataset = torch.utils.data.Subset(d, range(1000))
+        s = 1000 if subset_size is None else int(subset_size)
+        subset_dataset = torch.utils.data.Subset(d, range(s))
         subset_loader = torch.utils.data.DataLoader(dataset=subset_dataset, batch_size=batch_size, shuffle=False)
         return data_loader, subset_loader
