@@ -9,7 +9,8 @@ attacks = {
     'PGD': LinfProjectedGradientDescentAttack(rel_stepsize=0.1, steps=10),
     # 'PGD': LinfProjectedGradientDescentAttack(abs_stepsize=2/255, steps=50),
     'BIM': LinfBasicIterativeAttack(rel_stepsize=0.1, steps=1000),
-    'C&W': L2CarliniWagnerAttack(steps=1000, stepsize=5e-4, confidence=0., initial_const=1e-3),
+    'C&W': L2CarliniWagnerAttack(steps=1000, stepsize=5e-4, confidence=5, initial_const=1e-3,
+                                 binary_search_steps=9)
 }
 
 
@@ -34,7 +35,8 @@ def foolbox_attack(model, data_loader, attack_name, epsilon_values, args, device
         target = target.to(device)
         if attack_name in ('FGSM', 'PGD', 'BIM', 'C&W'):
             advs, _, success = attack_model(fbox_model, data, target, epsilons=epsilon_values)
-            # , mc=args['monte_carlo_runs'])
+        else:
+            raise NotImplementedError('Unsupported attack.')
         success_cum.append(success)
         del data, target
     success_cum = torch.cat(success_cum, dim=1)

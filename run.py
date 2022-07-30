@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from datetime import datetime
+from torchinfo import summary
 
 import torch
 from tqdm.auto import tqdm
@@ -285,7 +286,8 @@ def train(args, device):
     log.close()
 
     train_loader, _ = get_data_loader(args['dataset'], args['batch_size'], train=True, shuffle=True, drop_last=True)
-    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False, drop_last=False)
+    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], train=False, shuffle=False,
+                                                 drop_last=False)
     model = model_factory(args['model'],
                           args['dataset'],
                           train_type,
@@ -333,7 +335,8 @@ def test_multiple(args, device):
     else:
         train_type = args['training_type']
 
-    attack_names = ['FGSM']  # 'BIM', 'C&W', 'Few-Pixel'
+    # For test multiple, only do FGSM as its quicker.
+    attack_names = ['FGSM']
 
     # if this is to test a bunch of runs, accept the runid here.
     if args['run_id'] != -1:
@@ -453,9 +456,10 @@ def test_DA(args, device):
             # print(f'{name}: Appx mode:{layer.appx_mode}')
 
     model.eval()
-    test_loader, _ = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False, drop_last=False)
+    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False,
+                                                 drop_last=False, subset_size=100)
 
-    test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
+    test_acc = metrics.accuracy(model, subset_loader, device=device, norm=get_norm_func(args))
     print(f'DA accuracy: {100. * test_acc:.3f}%')
 
 
@@ -484,34 +488,62 @@ def test(args, device):
     model.load(os.path.join(model_path, 'ckpt_best'))
     # model.load(os.path.join(model_path, 'ckpt_last'))
     model.eval()
-    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False,
-                                                 drop_last=False, subset_size=1000)
 
-    # test_acc = metrics.accuracy(model, test_loader, device=device, norm=get_norm_func(args))
-    # print(f'Accuracy: {100. * test_acc:.3f}%')
+    # summary(model,
+    #         input_size=(args['batch_size'], 3, 32, 32),
+    #         # col_names=['input_size', 'output_size', 'kernel_size'],
+    #         depth=5
+    #         )
+
+    # lc = 0
+    # print('Layer name, stride, padding')
+    # for name, layer in model.named_modules():
+    #     if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
+    #         # pad = 'TRUE' if layer.padding[0] == 1 else 'FALSE'
+    #         # print(name, layer.stride[0], pad)
+    #         lc += 1
+    # print('Number of layers:', lc)
+    # breakpoint()
+
+    test_loader, subset_loader = get_data_loader(args['dataset'], args['batch_size'], False, shuffle=False,
+                                                 drop_last=False, subset_size=128)
+
+    test_norm = get_norm_func(args)
+    test_acc = metrics.accuracy(model, test_loader, device=device, norm=test_norm)
+    print(f'Accuracy: {100. * test_acc:.3f}%')
 
     # attack_names = ['FGSM', 'PGD', 'C&W', 'Square', 'Pixle']
-    attack_names = ['FGSM', 'CW']
+    attack_names = ['C&W']
     eps_names, eps_values = ['8/255'], [8. / 255]
 
     bb_attacks = {
-        'Square': Square(model, eps=8. / 255),
-        'Pixle': Pixle(model),
-        'CW': CW(model, kappa=0.1)
+        'FGSM': FGSM(model, eps=8./255),
+        # 'Square': Square(model, eps=8. / 255, n_queries=2000),
+        # 'Pixle': Pixle(model),
+        # 'OnePixel': OnePixel(model, pixels=1, popsize=400, steps=75),
+        # 'CW': CW(model, kappa=0.1, lr=0.0005, steps=1000)
+        # 'C&W': L2CarliniWagnerAttack(steps=1000, stepsize=5e-4,
+        # confidence=0., initial_const=1e-3, binary_search_steps=9)
     }
 
-    print('Adversarial testing.')
+    # print('Adversarial testing.')
     for idx, attack in enumerate(attack_names):
-        print('Attack: {}'.format(attack))
-        if attack in ['CW', 'Square', 'Pixle']:
+        # print('Attack: {}'.format(attack))
+        if attack in bb_attacks.keys():
             correct, total = 0, 0
+            inp_min, inp_max = 10.0, -10.0
             for i, (image, target) in enumerate(tqdm(subset_loader, leave=False)):
                 image, target = image.cuda(), target.cuda()
+                if test_norm is not None:
+                    image = test_norm(image)
+                inp_min = min(inp_min, torch.min(image).item())
+                inp_max = max(inp_max, torch.max(image).item())
                 total += len(target)
                 adv_images = bb_attacks[attack](image, target)
                 output = model(adv_images)
                 _, preds = output.max(1)
                 correct += preds.eq(target).sum().item()
+            print(f'Image min: {inp_min}, Image max: {inp_max}')
             print(f'{attack} Accuracy:{100 * (correct / total)}%')
         else:
             # eps_names = attack_to_dataset_config[attack][args['dataset']]['eps_names']

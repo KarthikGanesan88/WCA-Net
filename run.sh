@@ -1,14 +1,20 @@
 #!/bin/bash
 
-# cifar10/wideresnet40 cifar100/resnet34 cifar100/wideresnet40
+#for i in {1..10}
+#do
+#  python run.py test_multiple config/cifar10/mobilenetv2/m2.json $i
+#done
 
-for model in cifar10/resnet18
+for dataset in cifar10 cifar100
 do
-	for config in vanilla noise
-	do
-		echo $model/$config
-		python run.py test config/$model/$config.json
-	done
+  for model in preactresnet18 wideresnet32 vgg16 mobilenetv2
+  do
+    for config in m0 m2
+    do
+      echo $dataset/$model/$config
+      python run.py test config/$dataset/$model/$config.json -1
+    done
+  done
 done
 
 

@@ -8,3 +8,7 @@ output
 /approx/cuda_matmul.egg-info/*
 /approx/dist/*
 /test_mvn.py
+!/detect.py
+
+!/detect_pytorch.py
+!/images/
